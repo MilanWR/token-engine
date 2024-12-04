@@ -14,6 +14,7 @@ model User {
   firstName     String?
   lastName      String?
   apiKey        String         @unique
+  tokenIds      TokenIds?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   subscription  Subscription?
@@ -43,6 +44,17 @@ model ApiUsage {
   responseTime  Int
   statusCode    Int
   cost         Float
+}
+
+model TokenIds {
+  id            String         @id @default(uuid())
+  userId        String         @unique
+  user          User           @relation(fields: [userId], references: [id])
+  consentTokenId String        // Hedera Token ID for consent collection
+  dataCaptureTokenId String    // Hedera Token ID for data capture collection
+  incentiveTokenId String      // Hedera Token ID for incentive collection
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 enum PlanType {

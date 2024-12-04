@@ -22,11 +22,14 @@ export const rateLimiter = async (
       include: { subscription: true }
     });
 
-    if (!userWithSub || !userWithSub.subscription) {
+    if (!userWithSub) {
       return res.status(403).json({
-        error: 'No active subscription found'
+        error: 'User not found'
       });
     }
+
+    // If no subscription, assume FREE tier
+    const planType = userWithSub.subscription?.planType || 'FREE';
     
     const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
     
@@ -39,8 +42,7 @@ export const rateLimiter = async (
       },
     });
 
-    const userPlan = userWithSub.subscription.planType;
-    const limit = RATE_LIMITS[userPlan as keyof typeof RATE_LIMITS].requestsPerMinute;
+    const limit = RATE_LIMITS[planType as keyof typeof RATE_LIMITS].requestsPerMinute;
 
     if (recentRequests >= limit) {
       return res.status(429).json({
