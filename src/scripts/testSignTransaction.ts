@@ -1,55 +1,52 @@
-import { PrivateKey, Transaction } from "@hashgraph/sdk";
-import { client } from "../config/hedera";
+import { Transaction, PrivateKey } from "@hashgraph/sdk";
+import axios from "axios";
+import dotenv from "dotenv";
 
-async function testSignTransaction() {
+dotenv.config();
+
+const PRIVATE_KEY = "302e020100300506032b657004220420534c515280076a8de1113275dd1ea0f0940fd43675f588a91ca7dbcc73dda68b";
+const API_KEY = "te_d31eae94b0d20ad2b5bb91b4a0f9e45cc1920c704c42ffa6";
+
+async function main() {
     try {
-        // Get the response JSON from command line argument
-        const responseJson = process.argv[2];
-        if (!responseJson) {
-            console.error('Please provide the API response as an argument');
-            console.error('Example: npm run test-sign \'{"publicKey":"...","accountId":"...","unsignedTokenAssociateTransaction":"..."}\'');
-            process.exit(1);
-        }
+        const args = process.argv[2];
+        const { unsignedWithdrawTransaction, accountId, uid } = JSON.parse(args);
 
-        // Parse the response
-        const response = JSON.parse(responseJson);
-        const { unsignedTokenAssociateTransaction } = response;
+        // Decode base64 to buffer
+        const buffer = Buffer.from(unsignedWithdrawTransaction, 'base64');
+        
+        // Convert to Transaction
+        const transaction = Transaction.fromBytes(buffer);
+        
+        // Sign with hardcoded private key
+        const privateKey = PrivateKey.fromString(PRIVATE_KEY);
+        const signedTx = await transaction.sign(privateKey);
+        
+        // Get signed bytes and encode to base64
+        const signedBytes = signedTx.toBytes();
+        const signedBase64 = Buffer.from(signedBytes).toString('base64');
+        
+        console.log('\nSigned transaction (base64):', signedBase64);
 
-        // Use the private key we generated earlier
-        const privateKey = PrivateKey.fromString("302e020100300506032b657004220420534c515280076a8de1113275dd1ea0f0940fd43675f588a91ca7dbcc73dda68b");
-
-        // Convert base64 to transaction
-        const transactionBytes = Buffer.from(unsignedTokenAssociateTransaction, 'base64');
-        const transaction = Transaction.fromBytes(transactionBytes);
-
-        // Sign the transaction
-        const signedTransaction = await transaction.sign(privateKey);
-
-        // Convert signed transaction to base64
-        const signedTransactionBytes = signedTransaction.toBytes();
-        const signedTransactionBase64 = Buffer.from(signedTransactionBytes).toString('base64');
-
-        console.log('\nSigned transaction (base64):', signedTransactionBase64);
-
-        // Now we can use this to test the submit endpoint
-        const submitResponse = await fetch('http://localhost:3000/api/v1/users/token-association', {
-            method: 'POST',
+        // Submit to API
+        const response = await axios.post('http://localhost:3000/api/consent/withdraw/submit', {
+            signedTransaction: signedBase64,
+            accountId,
+            uid
+        }, {
             headers: {
                 'Content-Type': 'application/json',
-                'X-API-Key': 'te_e2fdcf0141922016f40b9f27cd2732e4fd8df1ddcbc95e36'
-            },
-            body: JSON.stringify({
-                signedTransaction: signedTransactionBase64
-            })
+                'X-API-Key': API_KEY
+            }
         });
 
-        const result = await submitResponse.json();
-        console.log('\nSubmit response:', result);
-
-    } catch (error) {
-        console.error('Error:', error);
+        console.log('API Response:', response.data);
+    } catch (error: any) {
+        console.error('API Error:', {
+            error: error.response?.data?.error || error.message,
+            details: error.response?.data?.details || error.stack
+        });
     }
 }
 
-// Run the test
-testSignTransaction(); 
+main(); 

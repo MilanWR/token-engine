@@ -14,12 +14,14 @@ model User {
   firstName     String?
   lastName      String?
   apiKey        String         @unique
-  tokenIds      TokenIds?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  isActive      Boolean        @default(true)
+  tokenIds      TokenIds[]
   subscription  Subscription?
   apiUsage      ApiUsage[]
-  isActive      Boolean        @default(true)
+  tokenCollections TokenCollection[]
+  consents      Consent[]
 }
 
 model Subscription {
@@ -47,14 +49,46 @@ model ApiUsage {
 }
 
 model TokenIds {
-  id            String         @id @default(uuid())
-  userId        String         @unique
-  user          User           @relation(fields: [userId], references: [id])
-  consentTokenId String        // Hedera Token ID for consent collection
-  dataCaptureTokenId String    // Hedera Token ID for data capture collection
-  incentiveTokenId String      // Hedera Token ID for incentive collection
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                String   @id @default(uuid())
+  userId            String   
+  user              User     @relation(fields: [userId], references: [id])
+  accountId         String   // Now required
+  consentTokenId    String   
+  dataCaptureTokenId String  
+  incentiveTokenId  String   
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model TokenCollection {
+  id                String   @id @default(uuid())
+  userId            String   // Foreign key to User
+  user              User     @relation(fields: [userId], references: [id])
+  consentTokenId    String   // Hedera token ID for consent collection
+  dataCaptureTokenId String  // Hedera token ID for data capture collection
+  incentiveTokenId  String   // Hedera token ID for incentive collection
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Consent {
+    id                   String    @id @default(uuid())
+    accountId            String
+    uid                  String?
+    consentHash          String
+    serialNumber         Int
+    tokenId              String
+    mintTransactionId    String
+    transferTransactionId String
+    withdrawnAt          DateTime?
+    createdAt            DateTime  @default(now())
+    updatedAt            DateTime  @updatedAt
+    user                 User      @relation(fields: [userId], references: [id])
+    userId               String
 }
 
 enum PlanType {
