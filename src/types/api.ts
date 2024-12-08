@@ -38,4 +38,20 @@ export interface WithdrawConsentResponse {
     accountId: string;
     uid?: string;
     consentHash: string;
+}
+
+export interface CreateDataCaptureRequest {
+  accountId: string;
+  uid?: string;
+  dataHash: string;
+  categoryId: number;
+  consentId: number;  // Serial number of the consent NFT
+}
+
+export interface CreateDataCaptureResponse {
+  success: boolean;
+  serialNumber?: number;
+  transactionId?: string;
+  accountId?: string;
+  uid?: string;
 } 

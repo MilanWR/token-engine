@@ -11,6 +11,7 @@ A Hedera-based token engine API for managing user consents and data capture thro
 6. [Development Guide](#development-guide)
 7. [Database](#database)
 8. [Security](#security)
+9. [Testing](#testing)
 
 ## Setup
 
@@ -182,16 +183,22 @@ npm run test-sign '{"publicKey":"YOUR_PUBLIC_KEY","accountId":"ACCOUNT_ID","unsi
 
 ### Consent Management
 
-1. **Create Consent**
-   ```http
-   POST /api/consent
-   ```
+1. **Consent NFT Structure**
+   Each consent NFT's metadata contains:
+   - Category ID: Identifies the type of consent
+   - Consent Hash: The actual consent data
+   - Format: `categoryId:consentHash`
+
+   Example metadata: `1:QmX4zdJ6DSRKoCzkbp7dDqbN5UpePGJjhLHyZQhcWJfBZt`
+
+2. **Create Consent**
    Request Body:
    ```json
    {
-       "accountId": "0.0.1234567",
+       "accountId": "0.0.123456",
        "consentHash": "QmX4zdJ6DSRKoCzkbp7dDqbN5UpePGJjhLHyZQhcWJfBZt",
-       "uid": "test_user_1"
+       "categoryId": 1,
+       "uid": "optional-user-id"
    }
    ```
    
@@ -201,12 +208,12 @@ npm run test-sign '{"publicKey":"YOUR_PUBLIC_KEY","accountId":"ACCOUNT_ID","unsi
        "success": true,
        "serialNumber": 1,
        "transactionId": "0.0.1234@1234567890.000000000",
-       "accountId": "0.0.1234567",
+       "accountId": "0.0.123456",
        "uid": "test_user_1"
    }
    ```
 
-2. **Withdraw Consent**
+3. **Withdraw Consent**
    
    a. Generate unsigned transaction:
    ```http
@@ -341,3 +348,257 @@ Common issues:
 2. **Transaction expired**: Sign and submit within validity window
 3. **Invalid signature**: Verify private key
  
+## Data Capture API
+
+### Consent NFT Structure
+Each consent NFT's metadata contains:
+- Category ID: Identifies the type of consent
+- Consent Hash: The actual consent data
+- Format: `categoryId:consentHash` (stored as base64 on-chain)
+
+Example metadata: `1:QmX4zdJ6DSRKoCzkbp7dDqbN5UpePGJjhLHyZQhcWJfBZt`
+
+### Create Consent
+- **POST** `/api/v1/consent`
+- Creates a new consent NFT with categorized metadata
+
+Request Body:
+```json
+{
+    "accountId": "0.0.123456",
+    "consentHash": "QmX4zdJ6DSRKoCzkbp7dDqbN5UpePGJjhLHyZQhcWJfBZt",
+    "categoryId": 1, //you could have multiple consents for different things. each different consent needs a different Id.
+    "uid": "optional-user-id"
+}
+```
+
+Response:
+```json
+{
+    "success": true,
+    "serialNumber": 4,
+    "transactionId": "0.0.123@1234567890.000",
+    "accountId": "0.0.123456",
+    "categoryId": 1,
+    "consentHash": "QmX4zdJ6DSRKoCzkbp7dDqbN5UpePGJjhLHyZQhcWJfBZt",
+    "uid": "optional-user-id"  // Only included if provided in request
+}
+```
+
+### Create Data Capture
+- **POST** `/api/v1/data-capture`
+- Creates a new data capture NFT
+- Verifies consent by checking for a valid consent NFT with matching categoryId
+
+Request Body:
+```json
+{
+    "accountId": "0.0.123456",
+    "dataHash": "hash-of-captured-data",
+    "categoryId": 1,
+    "uid": "optional-user-id"
+}
+```
+
+Response:
+```json
+{
+    "success": true,
+    "serialNumber": 1,
+    "transactionId": "0.0.123@1234567890.000",
+    "accountId": "0.0.123456",
+    "dataHash": "hash-of-captured-data",
+    "categoryId": 1,
+    "uid": "optional-user-id"  // Only included if provided in request
+}
+```
+
+### Consent Verification Process
+1. API retrieves all consent NFTs for the account from Hedera Mirror Node
+2. Decodes the base64 metadata of each NFT
+3. Checks for a consent NFT with matching categoryId
+4. Only proceeds with data capture if valid consent is found
+
+### Error Responses
+- `404 Not Found`: If no valid consent NFT found for the specified category
+- `400 Bad Request`: If required fields are missing
+- `500 Internal Server Error`: For other processing errors
+
+### List Data Captures
+- **GET** `/api/v1/data-capture/list?accountId=0.0.123456&categoryId=1`
+- Lists all data captures for an account
+- Optional categoryId filter
+
+Response:
+```json
+{
+    "success": true,
+    "dataCaptures": [
+        {
+            "id": "uuid",
+            "accountId": "0.0.123456",
+            "dataHash": "hash-of-captured-data",
+            "categoryId": 1,
+            "consentId": 12345,
+            "serialNumber": 1,
+            // ... other fields
+        }
+    ]
+}
+``` 
+
+## Testing
+
+### Account Creation & Token Association
+To test the full flow of creating a new account and associating tokens:
+
+1. Run the automated test script:
+```bash
+npm run test-account-creation
+```
+
+This script will:
+- Create a new user account with a test public key
+- Sign the token association transaction with the matching private key
+- Submit the signed transaction to associate tokens
+
+### Manual Testing
+If you need to test the endpoints individually:
+
+1. Create User Account
+```bash
+curl -X POST http://localhost:3000/api/v1/users \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "publicKey": "YOUR_PUBLIC_KEY"
+  }'
+```
+
+2. Sign the transaction (using test-sign script)
+```bash
+npm run test-sign -- '{"unsignedTokenAssociateTransaction":"TRANSACTION_FROM_STEP_1","accountId":"ACCOUNT_ID_FROM_STEP_1"}'
+```
+
+3. Submit Token Association
+```bash
+curl -X POST http://localhost:3000/api/v1/users/token-association \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "accountId": "ACCOUNT_ID_FROM_STEP_1",
+    "signedTransaction": "SIGNED_TRANSACTION_FROM_STEP_2"
+  }'
+``` 
+
+## Consent Management API
+
+### Consent NFT Structure
+Each consent NFT's metadata contains:
+- Category ID: Identifies the type of consent
+- Consent Hash: The actual consent data
+- Format: `categoryId:consentHash` (stored as base64 on-chain)
+
+### List Active Consents
+- **GET** `/api/v1/consent/active`
+- Lists all active consent NFTs
+
+Response:
+```json
+{
+    "consents": [
+        {
+            "serialNumber": 4,
+            "accountId": "0.0.5229278",
+            "categoryId": 1,
+            "hash": "QmX4zdJ6DSRKoCzkbp7dDqbN5UpePGJjhLHyZQhcWJfBZt",
+            "timestamp": "1733695810.545369699"
+        }
+    ]
+}
+```
+
+### List Withdrawn Consents
+- **GET** `/api/v1/consent/withdrawn`
+- Lists all consent NFTs that have been withdrawn (returned to treasury)
+
+Response:
+```json
+{
+    "withdrawnConsents": [
+        {
+            "serialNumber": 1,
+            "categoryId": 1,
+            "timestamp": "1733688725.108536000"
+        }
+    ]
+}
+```
+
+### Get Consent Status
+- **GET** `/api/v1/consent/{tokenId}/{serialNumber}/status`
+- Returns the current status of a specific consent NFT
+
+Response:
+```json
+{
+    "status": "active",
+    "history": [
+        {
+            "consensus_timestamp": "1733695812.921799541",
+            "type": "CRYPTOTRANSFER",
+            "receiver_account_id": "0.0.5229278",
+            "sender_account_id": "0.0.5229051"
+        }
+    ],
+    "metadata": {
+        "categoryId": 1,
+        "hash": "QmX4zdJ6DSRKoCzkbp7dDqbN5UpePGJjhLHyZQhcWJfBZt"
+    }
+}
+```
+
+### Get Consent History
+- **GET** `/api/v1/consent/{tokenId}/{serialNumber}/history`
+- Returns the complete lifecycle of a consent NFT
+
+Response:
+```json
+{
+    "serialNumber": 4,
+    "status": "active",
+    "consentGranted": {
+        "timestamp": "2024-12-08T22:10:10.000Z",
+        "transactionId": "0.0.1293-1733695800-115735262",
+        "grantedTo": "0.0.5229278"
+    },
+    "consentWithdrawn": null,
+    "detailedHistory": [
+        {
+            "timestamp": "2024-12-08T22:10:10.000Z",
+            "action": "MINT",
+            "from": "TREASURY",
+            "to": "0.0.5229051",
+            "transactionId": "0.0.1293-1733695800-115735262"
+        },
+        {
+            "timestamp": "2024-12-08T22:10:12.000Z",
+            "action": "TRANSFER",
+            "from": "0.0.5229051",
+            "to": "0.0.5229278",
+            "transactionId": "0.0.1293-1733695803-449454479"
+        }
+    ]
+}
+```
+
+### Error Responses
+All endpoints may return the following error responses:
+- `404 Not Found`: If the consent NFT doesn't exist
+- `500 Internal Server Error`: For processing errors
+
+### Notes
+- All timestamps are provided in both UNIX format (for precise ordering) and ISO format (for readability)
+- NFT history is ordered chronologically
+- Actions are labeled as MINT, TRANSFER, or WITHDRAW for clarity
+- Treasury account transfers indicate consent withdrawal 

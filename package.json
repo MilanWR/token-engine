@@ -10,7 +10,8 @@
     "test": "jest",
     "create-mock-owner": "ts-node src/scripts/createMockAppOwner.ts",
     "test-sign": "ts-node src/scripts/testSignTransaction.ts",
-    "generate-keypair": "ts-node src/scripts/generateKeyPair.ts"
+    "generate-keypair": "ts-node src/scripts/generateKeyPair.ts",
+    "test-account-creation": "ts-node src/scripts/testAccountCreation.ts"
   },
   "keywords": [],
   "author": "",

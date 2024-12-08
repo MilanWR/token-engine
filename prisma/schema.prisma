@@ -22,6 +22,7 @@ model User {
   apiUsage      ApiUsage[]
   tokenCollections TokenCollection[]
   consents      Consent[]
+  dataCaptures  DataCapture[]
 }
 
 model Subscription {
@@ -89,6 +90,26 @@ model Consent {
     updatedAt            DateTime  @updatedAt
     user                 User      @relation(fields: [userId], references: [id])
     userId               String
+}
+
+model DataCapture {
+    id                   String    @id @default(uuid())
+    accountId            String
+    uid                  String?
+    dataHash            String
+    categoryId          Int
+    consentId           Int       // Serial number of the consent NFT
+    serialNumber        Int
+    tokenId             String
+    mintTransactionId    String
+    transferTransactionId String
+    createdAt            DateTime  @default(now())
+    updatedAt            DateTime  @updatedAt
+    user                 User      @relation(fields: [userId], references: [id])
+    userId               String
+
+    @@index([accountId])
+    @@index([userId])
 }
 
 enum PlanType {
