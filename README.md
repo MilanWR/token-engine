@@ -491,6 +491,25 @@ curl -X POST http://localhost:3000/api/v1/users/token-association \
   }'
 ``` 
 
+### Incentive Token Redemption
+To test the full flow of redeeming incentive tokens:
+
+```bash
+npm run test-redeem
+```
+
+This script will:
+1. Create a redeem request for tokens
+2. Sign the redemption transaction
+3. Submit the signed transaction
+
+Required environment variables for testing:
+```env
+TEST_API_KEY=your_api_key
+USER_ACCOUNT_ID=0.0.xxxxx
+USER_PRIVATE_KEY=302e...
+```
+
 ## Consent Management API
 
 ### Consent NFT Structure
@@ -602,3 +621,94 @@ All endpoints may return the following error responses:
 - NFT history is ordered chronologically
 - Actions are labeled as MINT, TRANSFER, or WITHDRAW for clarity
 - Treasury account transfers indicate consent withdrawal 
+
+## Incentive Token API
+
+### Send Incentive Tokens
+- **POST** `/api/v1/incentive/send`
+- Sends incentive tokens to a user's account
+
+Request:
+```json
+{
+    "accountId": "0.0.123456",
+    "amount": 100,
+    "memo": "optional_memo_string"
+}
+```
+
+Response:
+```json
+{
+    "success": true,
+    "transactionId": "0.0.123@1234567890.000"
+}
+```
+
+### Create Redeem Transaction
+- **POST** `/api/v1/incentive/redeem`
+- Creates an unsigned transaction for redeeming tokens
+
+Request:
+```json
+{
+    "accountId": "0.0.123456",
+    "amount": 50,
+    "memo": "optional_memo_string"
+}
+```
+
+Response:
+```json
+{
+    "unsignedRedeemTransaction": "base64_encoded_transaction",
+    "accountId": "0.0.123456",
+    "amount": 50,
+    "memo": "optional_memo_string"
+}
+```
+
+### Submit Redeem Transaction
+- **POST** `/api/v1/incentive/redeem/submit`
+- Submits a signed redeem transaction
+
+Request:
+```json
+{
+    "accountId": "0.0.123456",
+    "signedTransaction": "base64_encoded_signed_transaction"
+}
+```
+
+### Optional Incentive Rewards
+The following endpoints now support optional incentive rewards by including an `incentiveAmount` in the request:
+
+1. Create Consent
+```json
+{
+    "accountId": "0.0.123456",
+    "consentHash": "hash_string",
+    "categoryId": 1,
+    "incentiveAmount": 10  // Optional
+}
+```
+
+2. Create Data Capture
+```json
+{
+    "accountId": "0.0.123456",
+    "dataHash": "hash_string",
+    "categoryId": 1,
+    "incentiveAmount": 5  // Optional
+}
+```
+
+### Error Responses
+- `400 Bad Request`: Missing required fields
+- `404 Not Found`: Token IDs not found
+- `500 Internal Server Error`: Processing errors
+
+### Notes
+- Incentive tokens are fungible tokens with 2 decimal places
+- Memo field can be used to track specific rewards or redemptions
+- All token transfers require the user's account to be associated with the token

@@ -1,27 +1,54 @@
 import { Transaction, PrivateKey } from "@hashgraph/sdk";
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 async function main() {
     try {
         const args = process.argv[2];
-        const { unsignedTokenAssociateTransaction, accountId } = JSON.parse(args);
+        if (!args) {
+            throw new Error('No transaction data provided');
+        }
 
-        // Decode base64 to buffer
-        const buffer = Buffer.from(unsignedTokenAssociateTransaction, 'base64');
+        const data = JSON.parse(args);
+        const { unsignedRedeemTransaction, unsignedTokenAssociateTransaction, accountId } = data;
+
+        if (!accountId) {
+            throw new Error('Account ID is required');
+        }
+
+        // Get the private key from environment
+        const privateKeyString = process.env.USER_PRIVATE_KEY;
+        if (!privateKeyString) {
+            throw new Error('USER_PRIVATE_KEY environment variable is required');
+        }
+        const privateKey = PrivateKey.fromString(privateKeyString);
+
+        let transaction;
+        if (unsignedRedeemTransaction) {
+            // Handle redeem transaction
+            transaction = Transaction.fromBytes(
+                Buffer.from(unsignedRedeemTransaction, 'base64')
+            );
+        } else if (unsignedTokenAssociateTransaction) {
+            // Handle token associate transaction
+            transaction = Transaction.fromBytes(
+                Buffer.from(unsignedTokenAssociateTransaction, 'base64')
+            );
+        } else {
+            throw new Error('No valid transaction provided');
+        }
+
+        const signedTransaction = await transaction.sign(privateKey);
+        const signedTransactionBytes = signedTransaction.toBytes();
         
-        // Convert to Transaction
-        const transaction = Transaction.fromBytes(buffer);
-        
-        // Sign with private key
-        const privateKey = PrivateKey.fromString("302e020100300506032b657004220420534c515280076a8de1113275dd1ea0f0940fd43675f588a91ca7dbcc73dda68b");
-        const signedTx = await transaction.sign(privateKey);
-        
-        // Get signed bytes and encode to base64
-        const signedBytes = signedTx.toBytes();
-        const signedBase64 = Buffer.from(signedBytes).toString('base64');
-        
-        console.log('\nSigned transaction (base64):', signedBase64);
+        console.log(JSON.stringify({
+            signedTransaction: Buffer.from(signedTransactionBytes).toString('base64'),
+            accountId
+        }));
     } catch (error) {
         console.error('Error:', error);
+        process.exit(1);
     }
 }
 

@@ -29,30 +29,50 @@ interface TransferNFTResult {
 
 export class HederaService {
     private client: Client;
-    private operatorId: AccountId;
+    private treasuryId: string;
+    private treasuryKey: PrivateKey;
+    private consentTokenId: string;
+    private dataCaptureTokenId: string;
+    private incentiveTokenId: string;
     private operatorKey: PrivateKey;
-    private treasuryId: AccountId;
-    private tokenId: TokenId;
 
     constructor() {
-        // Initialize client from config
-        this.client = client;
+        // Initialize client
+        this.client = Client.forTestnet();
 
-        // Get operator details from config
-        this.operatorId = AccountId.fromString(process.env.HEDERA_OPERATOR_ID!);
-        this.operatorKey = operatorKey; // Use the one from config
+        // Get operator from environment
+        const operatorId = process.env.HEDERA_OPERATOR_ID;
+        const operatorKey = process.env.HEDERA_OPERATOR_KEY;
 
-        console.log('Environment variables:', {
-            operatorId: process.env.HEDERA_OPERATOR_ID
-        });
-        
-        // Set the client operator
-        this.client.setOperator(this.operatorId, this.operatorKey);
+        if (!operatorId || !operatorKey) {
+            throw new Error('Environment variables OPERATOR_ID and OPERATOR_KEY must be present');
+        }
+
+        // Set the operator
+        this.operatorKey = PrivateKey.fromString(operatorKey);
+        this.treasuryId = operatorId;
+        this.treasuryKey = this.operatorKey;  // Initially set to operator key
+        this.client.setOperator(operatorId, this.operatorKey);
+
+        console.log('HederaService initialized with operator:', operatorId);
+    }
+
+    // Initialize all token IDs
+    async initialize(tokenIds: { 
+        consentTokenId: string; 
+        dataCaptureTokenId: string;
+        incentiveTokenId: string;
+        accountId: string;
+    }) {
+        this.consentTokenId = tokenIds.consentTokenId;
+        this.dataCaptureTokenId = tokenIds.dataCaptureTokenId;
+        this.incentiveTokenId = tokenIds.incentiveTokenId;
+        this.treasuryId = tokenIds.accountId;
     }
 
     // Add setters for treasury and token IDs
     public setTreasuryId(treasuryId: string) {
-        this.treasuryId = AccountId.fromString(treasuryId);
+        this.treasuryId = treasuryId;
     }
 
     public setTokenId(tokenId: string) {
@@ -150,30 +170,73 @@ export class HederaService {
     }
 
     async mintNFT(
-        treasuryAccountId: string,
-        tokenId: string,
-        metadata: string[]
-    ): Promise<{success: boolean; serialNumber?: number; transactionId?: string}> {
+        receiverAccountId: string,
+        metadata: string,
+        isConsent: boolean = true
+    ): Promise<{ success: boolean; serialNumber?: number; transactionId?: string }> {
         try {
-            const mintTx = new TokenMintTransaction()
-                .setTokenId(TokenId.fromString(tokenId))
-                .setMetadata(metadata.map(m => Buffer.from(m)))
+            const tokenId = isConsent ? this.consentTokenId : this.dataCaptureTokenId;
+            if (!tokenId) {
+                throw new Error(`${isConsent ? 'Consent' : 'Data Capture'} token ID not set`);
+            }
+
+            console.log('Minting NFT:', {
+                tokenId,
+                receiverAccountId,
+                treasuryId: this.treasuryId,
+                isConsent,
+                metadata: metadata.substring(0, 50) + '...'
+            });
+
+            // First mint the NFT
+            const mintTx = await new TokenMintTransaction()
+                .setTokenId(tokenId)
+                .setMetadata([Buffer.from(metadata)])
                 .freezeWith(this.client);
 
-            const mintResponse = await (await mintTx.sign(this.operatorKey)).execute(this.client);
-            const mintReceipt = await mintResponse.getReceipt(this.client);
-            const serialNumber = mintReceipt.serials[0].low;
+            const signedTx = await mintTx.sign(this.operatorKey);
+            const response = await signedTx.execute(this.client);
+            const receipt = await response.getReceipt(this.client);
+
+            // Get the serial number
+            const serialNumber = receipt.serials.length > 0 ? receipt.serials[0].low : undefined;
+
+            if (serialNumber === undefined) {
+                throw new Error('Failed to get serial number');
+            }
+
+            // Only transfer if receiver is different from treasury
+            if (receiverAccountId !== this.treasuryId) {
+                console.log('Transferring NFT:', {
+                    tokenId,
+                    serialNumber,
+                    from: this.treasuryId,
+                    to: receiverAccountId,
+                    isConsent
+                });
+
+                const transferTx = await new TransferTransaction()
+                    .addNftTransfer(
+                        tokenId,
+                        serialNumber,
+                        this.treasuryId,
+                        receiverAccountId
+                    )
+                    .freezeWith(this.client);
+
+                const signedTransferTx = await transferTx.sign(this.operatorKey);
+                const transferResponse = await signedTransferTx.execute(this.client);
+                await transferResponse.getReceipt(this.client);
+            }
 
             return {
                 success: true,
                 serialNumber,
-                transactionId: mintResponse.transactionId.toString()
+                transactionId: response.transactionId.toString()
             };
         } catch (error) {
-            console.error('Mint NFT error:', error);
-            return {
-                success: false
-            };
+            console.error(`${isConsent ? 'Consent' : 'Data Capture'} NFT error:`, error);
+            throw error;
         }
     }
 
@@ -224,6 +287,57 @@ export class HederaService {
             .freezeWith(this.client);
 
         return transaction;
+    }
+
+    async sendIncentiveTokens(
+        receiverAccountId: string, 
+        amount: number, 
+        memo: string
+    ): Promise<{ success: boolean; transactionId?: string }> {
+        try {
+            if (!this.incentiveTokenId) {
+                throw new Error('Incentive token ID not set');
+            }
+
+            const tx = await new TransferTransaction()
+                .addTokenTransfer(this.incentiveTokenId, this.treasuryId, -amount)
+                .addTokenTransfer(this.incentiveTokenId, receiverAccountId, amount)
+                .setTransactionMemo(memo)
+                .freezeWith(this.client);
+
+            const response = await (await tx.sign(this.operatorKey)).execute(this.client);
+            const receipt = await response.getReceipt(this.client);
+            
+            return {
+                success: receipt.status.toString() === 'SUCCESS',
+                transactionId: response.transactionId.toString()
+            };
+        } catch (error) {
+            console.error('Send incentive tokens error:', error);
+            throw error;
+        }
+    }
+
+    async createRedeemTokenTransaction(
+        accountId: string,
+        amount: number,
+        memo: string
+    ): Promise<Transaction> {
+        const tx = await new TransferTransaction()
+            .addTokenTransfer(this.incentiveTokenId, accountId, -amount)
+            .addTokenTransfer(this.incentiveTokenId, this.treasuryId, amount)
+            .setTransactionMemo(memo)
+            .freezeWith(this.client);
+
+        return tx;
+    }
+
+    setIncentiveTokenId(tokenId: string) {
+        this.incentiveTokenId = tokenId;
+    }
+
+    getIncentiveTokenId(): string {
+        return this.incentiveTokenId;
     }
 }
 

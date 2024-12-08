@@ -19,7 +19,10 @@ export {
     getConsentStatus,
     listActiveConsents,
     listWithdrawnConsents,
-    getConsentHistory
+    getConsentHistory,
+    sendIncentiveTokens,
+    createRedeemTokenTransaction,
+    submitRedeemTransaction
 };
 
 export const createUser = async (req: Request, res: Response) => {
@@ -158,9 +161,8 @@ export const submitTokenAssociation = async (req: Request, res: Response) => {
 
 export const createConsent = async (req: Request, res: Response) => {
     try {
-        const { accountId, uid, consentHash, categoryId } = req.body;
+        const { accountId, consentHash, categoryId, incentiveAmount, uid } = req.body;
 
-        // Validate input
         if (!accountId || !consentHash || !categoryId) {
             return res.status(400).json({
                 error: 'Missing required fields: accountId, consentHash, and categoryId are required'
@@ -172,48 +174,53 @@ export const createConsent = async (req: Request, res: Response) => {
             include: { tokenIds: true }
         });
 
-        if (!appOwner?.tokenIds?.[0]) {
-            return res.status(404).json({
-                error: 'Token IDs not found for app owner'
-            });
+        if (!appOwner?.tokenIds[0]) {
+            return res.status(404).json({ error: 'Token IDs not found' });
         }
 
-        const tokenIds = appOwner.tokenIds[0];
+        // Initialize HederaService with all token IDs
+        await hederaService.initialize({
+            consentTokenId: appOwner.tokenIds[0].consentTokenId,
+            dataCaptureTokenId: appOwner.tokenIds[0].dataCaptureTokenId,
+            incentiveTokenId: appOwner.tokenIds[0].incentiveTokenId,
+            accountId: appOwner.tokenIds[0].accountId
+        });
 
-        // Create NFT with categorized consent hash as metadata
-        const metadata = `${categoryId}:${consentHash}`; // Format: "categoryId:consentHash"
-        const nftResponse = await hederaService.mintNFT(
-            tokenIds.accountId,
-            tokenIds.consentTokenId,
-            [metadata]
-        );
-
+        const nftResponse = await hederaService.mintNFT(accountId, consentHash, true);
+        
         if (!nftResponse.success) {
             throw new Error('Failed to mint NFT');
         }
 
-        // Transfer NFT to user
-        const transferResponse = await hederaService.transferNFT(
-            tokenIds.consentTokenId,
-            nftResponse.serialNumber!,
-            accountId,
-            tokenIds.accountId
-        );
-
-        if (!transferResponse.success) {
-            throw new Error('Failed to transfer NFT');
+        // Add incentive reward if specified
+        if (incentiveAmount) {
+            await hederaService.sendIncentiveTokens(
+                accountId,
+                incentiveAmount,
+                `consent_reward_${nftResponse.transactionId}`
+            );
         }
 
-        // Return success response without database interaction
-        return res.status(201).json({
+        // Create response object without optional fields
+        const response = {
             success: true,
             serialNumber: nftResponse.serialNumber,
             transactionId: nftResponse.transactionId,
             accountId,
-            categoryId,
             consentHash,
-            ...(uid && { uid })
-        });
+            categoryId
+        };
+
+        // Add optional fields if they exist
+        if (incentiveAmount !== undefined) {
+            Object.assign(response, { incentiveAmount });
+        }
+        
+        if (uid !== undefined) {
+            Object.assign(response, { uid });
+        }
+
+        return res.status(201).json(response);
 
     } catch (error) {
         console.error('Create consent error:', error);
@@ -366,9 +373,8 @@ async function verifyConsentWithMirrorNode(accountId: string, consentTokenId: st
 // createDataCapture function
 export const createDataCapture = async (req: Request, res: Response) => {
     try {
-        const { accountId, uid, dataHash, categoryId } = req.body;
+        const { accountId, dataHash, categoryId, incentiveAmount, uid } = req.body;
 
-        // Validate input
         if (!accountId || !dataHash || !categoryId) {
             return res.status(400).json({
                 error: 'Missing required fields: accountId, dataHash, and categoryId are required'
@@ -380,60 +386,61 @@ export const createDataCapture = async (req: Request, res: Response) => {
             include: { tokenIds: true }
         });
 
-        if (!appOwner?.tokenIds?.[0]) {
-            return res.status(404).json({
-                error: 'Token IDs not found for app owner'
-            });
+        if (!appOwner?.tokenIds[0]) {
+            return res.status(404).json({ error: 'Token IDs not found' });
         }
 
-        const tokenIds = appOwner.tokenIds[0];
+        // Initialize HederaService with all token IDs
+        await hederaService.initialize({
+            consentTokenId: appOwner.tokenIds[0].consentTokenId,
+            dataCaptureTokenId: appOwner.tokenIds[0].dataCaptureTokenId,
+            incentiveTokenId: appOwner.tokenIds[0].incentiveTokenId,
+            accountId: appOwner.tokenIds[0].accountId
+        });
 
-        // Verify consent using categoryId
-        const hasValidConsent = await verifyConsentWithMirrorNode(
-            accountId, 
-            tokenIds.consentTokenId, 
-            categoryId
-        );
+        console.log('Creating data capture with:', {
+            accountId,
+            dataHash,
+            categoryId,
+            incentiveAmount,
+            dataCaptureTokenId: appOwner.tokenIds[0].dataCaptureTokenId
+        });
 
-        if (!hasValidConsent) {
-            return res.status(404).json({
-                error: `Valid consent not found for category ${categoryId}`
-            });
-        }
-
-        // Create NFT with data capture hash as metadata
-        const metadata = `${categoryId}:${dataHash}`;
-        const nftResponse = await hederaService.mintNFT(
-            tokenIds.accountId,
-            tokenIds.dataCaptureTokenId,
-            [metadata]
-        );
-
+        const nftResponse = await hederaService.mintNFT(accountId, dataHash, false);
+        
         if (!nftResponse.success) {
             throw new Error('Failed to mint data capture NFT');
         }
 
-        // Transfer NFT to user
-        const transferResponse = await hederaService.transferNFT(
-            tokenIds.dataCaptureTokenId,
-            nftResponse.serialNumber!,
-            accountId,
-            tokenIds.accountId
-        );
-
-        if (!transferResponse.success) {
-            throw new Error('Failed to transfer data capture NFT');
+        // Add incentive reward if specified
+        if (incentiveAmount) {
+            await hederaService.sendIncentiveTokens(
+                accountId,
+                incentiveAmount,
+                `data_capture_reward_${nftResponse.transactionId}`
+            );
         }
 
-        return res.status(201).json({
+        // Create response object without optional fields
+        const response = {
             success: true,
             serialNumber: nftResponse.serialNumber,
             transactionId: nftResponse.transactionId,
             accountId,
             dataHash,
-            categoryId,
-            ...(uid && { uid })
-        });
+            categoryId
+        };
+
+        // Add optional fields if they exist
+        if (incentiveAmount !== undefined) {
+            Object.assign(response, { incentiveAmount });
+        }
+        
+        if (uid !== undefined) {
+            Object.assign(response, { uid });
+        }
+
+        return res.status(201).json(response);
 
     } catch (error) {
         console.error('Create data capture error:', error);
@@ -635,6 +642,118 @@ export const getConsentHistory = async (req: Request, res: Response) => {
     }
 };
 
+export const sendIncentiveTokens = async (req: Request, res: Response) => {
+    try {
+        const { accountId, amount, memo } = req.body;
+
+        if (!accountId || !amount) {
+            return res.status(400).json({
+                error: 'Missing required fields: accountId and amount are required'
+            });
+        }
+
+        const appOwner = await prisma.user.findUnique({
+            where: { apiKey: req.headers['x-api-key'] as string },
+            include: { tokenIds: true }
+        });
+
+        if (!appOwner?.tokenIds[0]) {
+            return res.status(404).json({ error: 'Token IDs not found' });
+        }
+
+        // Initialize HederaService with all token IDs
+        await hederaService.initialize({
+            consentTokenId: appOwner.tokenIds[0].consentTokenId,
+            dataCaptureTokenId: appOwner.tokenIds[0].dataCaptureTokenId,
+            incentiveTokenId: appOwner.tokenIds[0].incentiveTokenId,
+            accountId: appOwner.tokenIds[0].accountId
+        });
+
+        const result = await hederaService.sendIncentiveTokens(
+            accountId,
+            amount,
+            memo || `reward_${Date.now()}`
+        );
+
+        return res.json(result);
+    } catch (error) {
+        console.error('Controller error:', error);
+        return res.status(500).json({
+            error: 'Error sending incentive tokens',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+export const createRedeemTokenTransaction = async (req: Request, res: Response) => {
+    try {
+        const { accountId, amount, memo } = req.body;
+
+        if (!accountId || !amount) {
+            return res.status(400).json({
+                error: 'Missing required fields: accountId and amount are required'
+            });
+        }
+
+        const appOwner = await prisma.user.findUnique({
+            where: { apiKey: req.headers['x-api-key'] as string },
+            include: { tokenIds: true }
+        });
+
+        if (!appOwner?.tokenIds[0]) {
+            return res.status(404).json({ error: 'Token IDs not found' });
+        }
+
+        hederaService.setIncentiveTokenId(appOwner.tokenIds[0].incentiveTokenId);
+        const unsignedTx = await hederaService.createRedeemTokenTransaction(
+            accountId,
+            amount,
+            memo || `redeem_${Date.now()}`
+        );
+
+        const txBytes = unsignedTx.toBytes();
+        const unsignedRedeemTransaction = Buffer.from(txBytes).toString('base64');
+
+        return res.json({
+            unsignedRedeemTransaction,
+            accountId,
+            amount,
+            memo
+        });
+    } catch (error) {
+        return res.status(500).json({
+            error: 'Error creating redeem transaction',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+export const submitRedeemTransaction = async (req: Request, res: Response) => {
+    try {
+        const { signedTransaction, accountId } = req.body;
+
+        if (!signedTransaction || !accountId) {
+            return res.status(400).json({
+                error: 'Missing required fields: signedTransaction and accountId are required'
+            });
+        }
+
+        const success = await hederaService.submitSignedTransaction(
+            Buffer.from(signedTransaction, 'base64')
+        );
+
+        return res.json({
+            success,
+            message: success ? 'Tokens redeemed successfully' : 'Token redemption failed'
+        });
+    } catch (error) {
+        return res.status(500).json({
+            error: 'Error submitting redeem transaction',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
 // Log the exports
-console.log('Exports:', { createUser, submitTokenAssociation, createConsent, createWithdrawConsentTransaction, submitWithdrawConsent, createDataCapture, verifyDataCapture, listDataCaptures, getConsentStatus, listActiveConsents, listWithdrawnConsents, getConsentHistory });
+console.log('Exports:', { createUser, submitTokenAssociation, createConsent, createWithdrawConsentTransaction, submitWithdrawConsent, createDataCapture, verifyDataCapture, listDataCaptures, getConsentStatus, listActiveConsents, listWithdrawnConsents, getConsentHistory, sendIncentiveTokens, createRedeemTokenTransaction, submitRedeemTransaction });
   

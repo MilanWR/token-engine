@@ -11,7 +11,10 @@ import { createUser,
     listWithdrawnConsents,
     listActiveConsents,
     getConsentStatus,
-    getConsentHistory
+    getConsentHistory,
+    sendIncentiveTokens,
+    createRedeemTokenTransaction,
+    submitRedeemTransaction
 } from '../controllers/apiController';
 
 const router = express.Router();
@@ -29,6 +32,9 @@ router.get('/v1/consent/:tokenId/:serialNumber/status', authenticateApiKey, getC
 router.get('/v1/consent/active', authenticateApiKey, listActiveConsents);
 router.get('/v1/consent/withdrawn', authenticateApiKey, listWithdrawnConsents);
 router.get('/v1/consent/:tokenId/:serialNumber/history', authenticateApiKey, getConsentHistory);
+router.post('/v1/incentive/send', authenticateApiKey, sendIncentiveTokens);
+router.post('/v1/incentive/redeem', authenticateApiKey, createRedeemTokenTransaction);
+router.post('/v1/incentive/redeem/submit', authenticateApiKey, submitRedeemTransaction);
 
 
 export default router;
