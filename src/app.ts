@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import apiRoutes from './routes/api';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './config/swagger';
 
 dotenv.config();
 
@@ -21,6 +23,9 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api', apiRoutes);
+
+// Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Basic error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

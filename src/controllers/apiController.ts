@@ -7,6 +7,70 @@ import { mirrorNodeService } from '../services/mirrorNodeService';
 // Add console.log to verify exports
 console.log('Loading apiController...');
 
+/**
+ * @swagger
+ * tags:
+ *   - name: Consent
+ *     description: Consent NFT management
+ *   - name: Data Capture
+ *     description: Data capture NFT operations
+ *   - name: Incentive
+ *     description: Incentive token management
+ *   - name: User
+ *     description: User account management
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     ConsentRequest:
+ *       type: object
+ *       required:
+ *         - accountId
+ *         - consentHash
+ *         - categoryId
+ *       properties:
+ *         accountId:
+ *           type: string
+ *           example: "0.0.123456"
+ *         consentHash:
+ *           type: string
+ *           example: "QmX4zdJ6DSRKoCzkbp7dDqbN5UpePGJjhLHyZQhcWJfBZt"
+ *         categoryId:
+ *           type: integer
+ *           example: 1
+ *         incentiveAmount:
+ *           type: number
+ *           example: 10
+ *         uid:
+ *           type: string
+ *           example: "optional-user-id"
+ *     
+ *     DataCaptureRequest:
+ *       type: object
+ *       required:
+ *         - accountId
+ *         - dataHash
+ *         - categoryId
+ *       properties:
+ *         accountId:
+ *           type: string
+ *           example: "0.0.123456"
+ *         dataHash:
+ *           type: string
+ *           example: "QmX4zdJ6DSRKoCzkbp7dDqbN5UpePGJjhLHyZQhcWJfBZt"
+ *         categoryId:
+ *           type: integer
+ *           example: 1
+ *         incentiveAmount:
+ *           type: number
+ *           example: 5
+ *         uid:
+ *           type: string
+ *           example: "optional-user-id"
+ */
+
 export {
     createUser,
     submitTokenAssociation,
@@ -159,6 +223,29 @@ export const submitTokenAssociation = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * @swagger
+ * /api/v1/consent:
+ *   post:
+ *     summary: Create a new consent NFT
+ *     tags: [Consent]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ConsentRequest'
+ *     responses:
+ *       201:
+ *         description: Consent NFT created successfully
+ *       400:
+ *         description: Invalid request parameters
+ *       401:
+ *         description: Invalid API key
+ */
+
 export const createConsent = async (req: Request, res: Response) => {
     try {
         const { accountId, consentHash, categoryId, incentiveAmount, uid } = req.body;
@@ -230,6 +317,39 @@ export const createConsent = async (req: Request, res: Response) => {
         });
     }
 };
+
+/**
+ * @swagger
+ * /api/v1/consent/active:
+ *   get:
+ *     summary: List all active consents
+ *     tags: [Consent]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: List of active consents
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 consents:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       serialNumber:
+ *                         type: integer
+ *                       accountId:
+ *                         type: string
+ *                       categoryId:
+ *                         type: integer
+ *                       hash:
+ *                         type: string
+ *                       timestamp:
+ *                         type: string
+ */
 
 export const createWithdrawConsentTransaction = async (req: Request, res: Response) => {
     try {
@@ -370,6 +490,31 @@ async function verifyConsentWithMirrorNode(accountId: string, consentTokenId: st
     }
 }
 
+/**
+ * @swagger
+ * /api/v1/data-capture:
+ *   post:
+ *     summary: Create a new data capture NFT
+ *     tags: [Data Capture]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/DataCaptureRequest'
+ *     responses:
+ *       201:
+ *         description: Data capture NFT created successfully
+ *       400:
+ *         description: Invalid request parameters
+ *       401:
+ *         description: Invalid API key
+ *       404:
+ *         description: No valid consent found
+ */
+
 // createDataCapture function
 export const createDataCapture = async (req: Request, res: Response) => {
     try {
@@ -483,6 +628,31 @@ export const verifyDataCapture = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * @swagger
+ * /api/v1/data-capture/list:
+ *   get:
+ *     summary: List data captures
+ *     tags: [Data Capture]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: accountId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Hedera account ID
+ *       - in: query
+ *         name: categoryId
+ *         schema:
+ *           type: integer
+ *         description: Optional category filter
+ *     responses:
+ *       200:
+ *         description: List of data captures
+ */
+
 export const listDataCaptures = async (req: Request, res: Response) => {
     try {
         const { accountId, categoryId } = req.query;
@@ -513,6 +683,32 @@ export const listDataCaptures = async (req: Request, res: Response) => {
 
 // New endpoints for data capture and consent management
 
+/**
+ * @swagger
+ * /api/v1/consent/{tokenId}/{serialNumber}/status:
+ *   get:
+ *     summary: Get consent NFT status
+ *     tags: [Consent]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: tokenId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Consent token ID
+ *       - in: path
+ *         name: serialNumber
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: NFT serial number
+ *     responses:
+ *       200:
+ *         description: Consent status details
+ */
+
 export const getConsentStatus = async (req: Request, res: Response) => {
     try {
         const { tokenId, serialNumber } = req.params;
@@ -525,6 +721,32 @@ export const getConsentStatus = async (req: Request, res: Response) => {
         });
     }
 };
+
+/**
+ * @swagger
+ * /api/v1/consent/{tokenId}/{serialNumber}/history:
+ *   get:
+ *     summary: Get consent NFT history
+ *     tags: [Consent]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: tokenId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Consent token ID
+ *       - in: path
+ *         name: serialNumber
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: NFT serial number
+ *     responses:
+ *       200:
+ *         description: Complete consent history
+ */
 
 export const listActiveConsents = async (req: Request, res: Response) => {
     try {
@@ -642,6 +864,57 @@ export const getConsentHistory = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * @swagger
+ * /api/v1/incentive/send:
+ *   post:
+ *     summary: Send incentive tokens to a user's account
+ *     tags: [Incentive]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - accountId
+ *               - amount
+ *             properties:
+ *               accountId:
+ *                 type: string
+ *                 description: Hedera account ID
+ *                 example: "0.0.123456"
+ *               amount:
+ *                 type: number
+ *                 description: Amount of tokens to send
+ *                 example: 100
+ *               memo:
+ *                 type: string
+ *                 description: Optional memo for the transaction
+ *                 example: "Reward for consent"
+ *     responses:
+ *       200:
+ *         description: Tokens sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 transactionId:
+ *                   type: string
+ *                   example: "0.0.123@1234567890.000"
+ *       400:
+ *         description: Invalid request parameters
+ *       401:
+ *         description: Invalid API key
+ *       500:
+ *         description: Server error
+ */
 export const sendIncentiveTokens = async (req: Request, res: Response) => {
     try {
         const { accountId, amount, memo } = req.body;
@@ -685,6 +958,57 @@ export const sendIncentiveTokens = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * @swagger
+ * /api/v1/incentive/redeem:
+ *   post:
+ *     summary: Create an unsigned transaction for redeeming tokens
+ *     tags: [Incentive]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - accountId
+ *               - amount
+ *             properties:
+ *               accountId:
+ *                 type: string
+ *                 description: Hedera account ID
+ *                 example: "0.0.123456"
+ *               amount:
+ *                 type: number
+ *                 description: Amount of tokens to redeem
+ *                 example: 50
+ *               memo:
+ *                 type: string
+ *                 description: Optional memo for the transaction
+ *                 example: "Token redemption"
+ *     responses:
+ *       200:
+ *         description: Unsigned transaction created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 unsignedRedeemTransaction:
+ *                   type: string
+ *                   description: Base64 encoded unsigned transaction
+ *                 accountId:
+ *                   type: string
+ *                   example: "0.0.123456"
+ *                 amount:
+ *                   type: number
+ *                   example: 50
+ *                 memo:
+ *                   type: string
+ *                   example: "Token redemption"
+ */
 export const createRedeemTokenTransaction = async (req: Request, res: Response) => {
     try {
         const { accountId, amount, memo } = req.body;
@@ -728,6 +1052,46 @@ export const createRedeemTokenTransaction = async (req: Request, res: Response) 
     }
 };
 
+/**
+ * @swagger
+ * /api/v1/incentive/redeem/submit:
+ *   post:
+ *     summary: Submit a signed redeem transaction
+ *     tags: [Incentive]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - accountId
+ *               - signedTransaction
+ *             properties:
+ *               accountId:
+ *                 type: string
+ *                 description: Hedera account ID
+ *                 example: "0.0.123456"
+ *               signedTransaction:
+ *                 type: string
+ *                 description: Base64 encoded signed transaction
+ *     responses:
+ *       200:
+ *         description: Transaction submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 transactionId:
+ *                   type: string
+ *                   example: "0.0.123@1234567890.000"
+ */
 export const submitRedeemTransaction = async (req: Request, res: Response) => {
     try {
         const { signedTransaction, accountId } = req.body;
