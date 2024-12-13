@@ -1,0 +1,121 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  firstName     String?
+  lastName      String?
+  apiKey        String         @unique
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  isActive      Boolean        @default(true)
+  tokenIds      TokenIds[]
+  subscription  Subscription?
+  apiUsage      ApiUsage[]
+  tokenCollections TokenCollection[]
+  consents      Consent[]
+  dataCaptures  DataCapture[]
+  accountId     String?
+}
+
+model Subscription {
+  id            String         @id @default(uuid())
+  userId        String         @unique
+  user          User           @relation(fields: [userId], references: [id])
+  planType      PlanType
+  startDate     DateTime       @default(now())
+  endDate       DateTime?
+  isActive      Boolean        @default(true)
+  stripeCustomerId String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model ApiUsage {
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id])
+  endpoint      String
+  timestamp     DateTime       @default(now())
+  responseTime  Int
+  statusCode    Int
+  cost         Float
+}
+
+model TokenIds {
+  id                String   @id @default(uuid())
+  userId            String   
+  user              User     @relation(fields: [userId], references: [id])
+  accountId         String   // Now required
+  consentTokenId    String   
+  dataCaptureTokenId String  
+  incentiveTokenId  String   
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model TokenCollection {
+  id                String   @id @default(uuid())
+  userId            String   // Foreign key to User
+  user              User     @relation(fields: [userId], references: [id])
+  consentTokenId    String   // Hedera token ID for consent collection
+  dataCaptureTokenId String  // Hedera token ID for data capture collection
+  incentiveTokenId  String   // Hedera token ID for incentive collection
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Consent {
+    id                   String    @id @default(uuid())
+    accountId            String
+    uid                  String?
+    consentHash          String
+    serialNumber         Int
+    tokenId              String
+    mintTransactionId    String
+    transferTransactionId String
+    withdrawnAt          DateTime?
+    createdAt            DateTime  @default(now())
+    updatedAt            DateTime  @updatedAt
+    user                 User      @relation(fields: [userId], references: [id])
+    userId               String
+}
+
+model DataCapture {
+    id                   String    @id @default(uuid())
+    accountId            String
+    uid                  String?
+    dataHash            String
+    categoryId          Int
+    consentId           Int       // Serial number of the consent NFT
+    serialNumber        Int
+    tokenId             String
+    mintTransactionId    String
+    transferTransactionId String
+    createdAt            DateTime  @default(now())
+    updatedAt            DateTime  @updatedAt
+    user                 User      @relation(fields: [userId], references: [id])
+    userId               String
+
+    @@index([accountId])
+    @@index([userId])
+}
+
+enum PlanType {
+  FREE
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
