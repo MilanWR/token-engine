@@ -69,16 +69,16 @@ export class HederaService {
     }
 
     // Initialize all token IDs
-    async initialize(tokenIds: { 
-        consentTokenId: string; 
+    public async initialize(config: {
+        consentTokenId: string;
         dataCaptureTokenId: string;
         incentiveTokenId: string;
         accountId: string;
-    }) {
-        this.consentTokenId = tokenIds.consentTokenId;
-        this.dataCaptureTokenId = tokenIds.dataCaptureTokenId;
-        this.incentiveTokenId = tokenIds.incentiveTokenId;
-        this.treasuryId = tokenIds.accountId;
+    }): Promise<void> {
+        this.consentTokenId = config.consentTokenId;
+        this.dataCaptureTokenId = config.dataCaptureTokenId;
+        this.incentiveTokenId = config.incentiveTokenId;
+        this.treasuryId = config.accountId;
     }
 
     // Add setters for treasury and token IDs

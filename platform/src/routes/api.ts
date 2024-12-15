@@ -22,27 +22,31 @@ import { RequestHandler } from 'express';
 
 const router = express.Router();
 
+// Update type casting to handle async responses
+type AsyncRequestHandler = (req: Request, res: Response, next: NextFunction) => Promise<any>;
+
+
 // Cast controller functions to RequestHandler to fix TypeScript errors
-const handlers = {
-    createUser: createUser as RequestHandler,
-    submitTokenAssociation: submitTokenAssociation as RequestHandler,
-    createConsent: createConsent as RequestHandler,
-    createWithdrawConsentTransaction: createWithdrawConsentTransaction as RequestHandler,
-    submitWithdrawConsent: submitWithdrawConsent as RequestHandler,
-    createDataCapture: createDataCapture as RequestHandler,
-    verifyDataCapture: verifyDataCapture as RequestHandler,
-    listDataCaptures: listDataCaptures as RequestHandler,
-    getConsentStatus: getConsentStatus as RequestHandler,
-    listActiveConsents: listActiveConsents as RequestHandler,
-    listWithdrawnConsents: listWithdrawnConsents as RequestHandler,
-    getConsentHistory: getConsentHistory as RequestHandler,
-    sendIncentiveTokens: sendIncentiveTokens as RequestHandler,
-    createRedeemTokenTransaction: createRedeemTokenTransaction as RequestHandler,
-    submitRedeemTransaction: submitRedeemTransaction as RequestHandler,
-    getIncentiveBalance: getIncentiveBalance as RequestHandler
+const handlers: Record<string, RequestHandler> = {
+    createUser: createUser as unknown as RequestHandler,
+    submitTokenAssociation: submitTokenAssociation as unknown as RequestHandler,
+    createConsent: createConsent as unknown as RequestHandler,
+    createWithdrawConsentTransaction: createWithdrawConsentTransaction as unknown as RequestHandler,
+    submitWithdrawConsent: submitWithdrawConsent as unknown as RequestHandler,
+    createDataCapture: createDataCapture as unknown as RequestHandler,
+    verifyDataCapture: verifyDataCapture as unknown as RequestHandler,
+    listDataCaptures: listDataCaptures as unknown as RequestHandler,
+    getConsentStatus: getConsentStatus as unknown as RequestHandler,
+    listActiveConsents: listActiveConsents as unknown as RequestHandler,
+    listWithdrawnConsents: listWithdrawnConsents as unknown as RequestHandler,
+    getConsentHistory: getConsentHistory as unknown as RequestHandler,
+    sendIncentiveTokens: sendIncentiveTokens as unknown as RequestHandler,
+    createRedeemTokenTransaction: createRedeemTokenTransaction as unknown as RequestHandler,
+    submitRedeemTransaction: submitRedeemTransaction as unknown as RequestHandler,
+    getIncentiveBalance: getIncentiveBalance as unknown as RequestHandler
 };
 
-// Routes with correct middleware name
+// Routes
 router.post('/v1/users', authenticateApiKey, handlers.createUser);
 router.post('/v1/users/token-association', authenticateApiKey, handlers.submitTokenAssociation);
 router.post('/v1/consent', authenticateApiKey, handlers.createConsent);

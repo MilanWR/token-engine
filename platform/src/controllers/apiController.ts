@@ -1,8 +1,11 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
+import { PrismaClient } from '@prisma/client';
 import { CreateConsentRequest } from '../types/api';
 import { hederaService } from '../services/hederaService';
 import { mirrorNodeService } from '../services/mirrorNodeService';
+
+const prisma = new PrismaClient();
 
 // Add console.log to verify exports
 console.log('Loading apiController...');
@@ -109,13 +112,28 @@ export {
  *             properties:
  *               publicKey:
  *                 type: string
- *                 description: User's public key
+ *                 description: User's ED25519 public key (64 hex chars or DER encoded)
+ *                 example: "302a300506032b6570032100..."
  *               uid:
  *                 type: string
  *                 description: Optional user identifier
  *     responses:
  *       201:
  *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 publicKey:
+ *                   type: string
+ *                 accountId:
+ *                   type: string
+ *                 unsignedTokenAssociateTransaction:
+ *                   type: string
+ *                   description: Base64 encoded unsigned transaction
+ *                 uid:
+ *                   type: string
  *       400:
  *         description: Invalid request parameters
  *       401:
