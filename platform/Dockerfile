@@ -1,6 +1,9 @@
 # Build stage
 FROM node:18-slim as builder
 
+# Install OpenSSL for Prisma
+RUN apt-get update -y && apt-get install -y openssl
+
 # Set working directory
 WORKDIR /app
 
@@ -24,6 +27,9 @@ RUN npm run build
 # Production stage
 FROM node:18-slim
 
+# Install OpenSSL for Prisma
+RUN apt-get update -y && apt-get install -y openssl
+
 WORKDIR /app
 
 # Copy package files and prisma schema
@@ -38,9 +44,6 @@ RUN npx prisma generate
 
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
-
-# Copy any other necessary files
-COPY .env ./
 
 # Expose port 3000
 EXPOSE 3000
