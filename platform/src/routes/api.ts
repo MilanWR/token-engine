@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction, RequestHandler } from 'express';
-import { authenticateApiKey, AuthRequest } from '../middleware/auth';
+import { authenticateApiKey } from '../middleware/auth';
 import { 
     createUser, 
     submitTokenAssociation, 
@@ -28,17 +28,11 @@ type AsyncHandler = (
     next: NextFunction
 ) => Promise<void | Response<any, Record<string, any>>>;
 
-// Update wrapper to handle Response returns
+// Update wrapper to handle Response returns and void
 const wrapHandler = (handler: AsyncHandler): RequestHandler => {
-    return async (req, res, next) => {
-        try {
-            const result = await handler(req, res, next);
-            if (result) {
-                return result;
-            }
-        } catch (error) {
-            next(error);
-        }
+    return (req, res, next) => {
+        handler(req, res, next).catch(next);
+        return;
     };
 };
 
