@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import prisma from '../config/database';
 import { PrismaClient } from '@prisma/client';
-import { CreateConsentRequest } from '../types/api';
 import { hederaService } from '../services/hederaService';
 import { mirrorNodeService } from '../services/mirrorNodeService';
 
@@ -9,6 +7,25 @@ const prisma = new PrismaClient();
 
 // Add console.log to verify exports
 console.log('Loading apiController...');
+
+interface CreateUserRequest {
+    publicKey: string;
+    uid?: string;
+}
+
+interface WithdrawConsentRequest {
+    accountId: string;
+    serialNumber: number;
+    consentHash: string;
+    uid?: string;
+}
+
+interface NFTInfo {
+    serial_number: number;
+    account_id: string;
+    metadata: string;
+    created_timestamp: string;
+}
 
 /**
  * @swagger
@@ -73,25 +90,6 @@ console.log('Loading apiController...');
  *           type: string
  *           example: "optional-user-id"
  */
-
-export {
-    createUser,
-    submitTokenAssociation,
-    createConsent,
-    createWithdrawConsentTransaction,
-    submitWithdrawConsent,
-    createDataCapture,
-    verifyDataCapture,
-    listDataCaptures,
-    getConsentStatus,
-    listActiveConsents,
-    listWithdrawnConsents,
-    getConsentHistory,
-    sendIncentiveTokens,
-    createRedeemTokenTransaction,
-    submitRedeemTransaction,
-    getIncentiveBalance
-};
 
 /**
  * @swagger
@@ -476,7 +474,11 @@ export const submitWithdrawConsent = async (req: Request, res: Response) => {
 
         // Set the treasury and token IDs for this operation
         hederaService.setTreasuryId(appOwner.tokenIds[0].accountId);
-        hederaService.setTokenId(appOwner.tokenIds[0].consentTokenId);
+        hederaService.setTokenIds({
+            consentTokenId: appOwner.tokenIds[0].consentTokenId,
+            dataCaptureTokenId: appOwner.tokenIds[0].dataCaptureTokenId,
+            incentiveTokenId: appOwner.tokenIds[0].incentiveTokenId
+        });
 
         // Continue with transaction submission
         const success = await hederaService.submitSignedTransaction(signedTransaction);
@@ -1152,9 +1154,7 @@ export const submitRedeemTransaction = async (req: Request, res: Response) => {
             });
         }
 
-        const success = await hederaService.submitSignedTransaction(
-            Buffer.from(signedTransaction, 'base64')
-        );
+        const success = await hederaService.submitSignedTransaction(signedTransaction);
 
         return res.json({
             success,
