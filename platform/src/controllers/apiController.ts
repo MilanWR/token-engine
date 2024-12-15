@@ -246,7 +246,7 @@ export const createUser = async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/v1/users/associate:
+ * /api/v1/users/token-association:
  *   post:
  *     summary: Submit a signed token association transaction
  *     tags: [Users]
