@@ -31,13 +31,23 @@ export class HederaService {
     private client: Client;
     private treasuryId: string;
     private treasuryKey: PrivateKey;
-    private consentTokenId: string;
-    private dataCaptureTokenId: string;
-    private incentiveTokenId: string;
+    private readonly consentTokenId: string;
+    private readonly dataCaptureTokenId: string;
+    private readonly incentiveTokenId: string;
     private operatorKey: PrivateKey;
-    private mirrorNodeUrl: string;
+    private readonly mirrorNodeUrl: string;
 
-    constructor(network: string = 'testnet') {
+    constructor(
+        network: string = 'testnet',
+        consentTokenId?: string,
+        dataCaptureTokenId?: string,
+        incentiveTokenId?: string
+    ) {
+        this.mirrorNodeUrl = `https://${network}.mirrornode.hedera.com`;
+        this.consentTokenId = consentTokenId || process.env.CONSENT_TOKEN_ID || '';
+        this.dataCaptureTokenId = dataCaptureTokenId || process.env.DATA_CAPTURE_TOKEN_ID || '';
+        this.incentiveTokenId = incentiveTokenId || process.env.INCENTIVE_TOKEN_ID || '';
+
         // Initialize client
         this.client = Client.forTestnet();
 
@@ -56,9 +66,6 @@ export class HederaService {
         this.client.setOperator(operatorId, this.operatorKey);
 
         console.log('HederaService initialized with operator:', operatorId);
-
-        // Set mirror node URL based on network
-        this.mirrorNodeUrl = `https://${network}.mirrornode.hedera.com`;
     }
 
     // Initialize all token IDs
