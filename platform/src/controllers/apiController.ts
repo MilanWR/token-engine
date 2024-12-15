@@ -908,9 +908,8 @@ export const getConsentStatus = async (req: Request, res: Response) => {
         // Check if any NFT metadata matches the category ID
         const hasConsent = nfts.some(nft => {
             try {
-                const metadata = mirrorNodeService.decodeMetadata(nft.metadata);
-                const [nftCategoryId] = metadata.split(':');
-                return nftCategoryId === categoryId;
+                const decodedMetadata = mirrorNodeService.decodeMetadata(nft.metadata);
+                return decodedMetadata.categoryId === parseInt(categoryId as string);
             } catch (error) {
                 console.error('Error processing NFT metadata:', error);
                 return false;
