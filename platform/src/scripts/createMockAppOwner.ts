@@ -5,15 +5,19 @@ import { generateApiKey } from "../utils/apiKey";
 
 async function createMockAppOwner() {
     try {
-        // Clean up existing data
+        // Check for existing user
         const existingUser = await prisma.user.findUnique({
-            where: { email: 'mockapp@example.com' }
+            where: { email: 'mockapp@example.com' },
+            include: { tokenIds: true }
         });
 
         if (existingUser) {
-            console.log('Cleaning up existing user...');
-            await prisma.tokenIds.deleteMany({ where: { userId: existingUser.id } });
-            await prisma.user.delete({ where: { id: existingUser.id } });
+            console.log('Mock app owner already exists:', {
+                email: existingUser.email,
+                apiKey: existingUser.apiKey,
+                tokenIds: existingUser.tokenIds
+            });
+            return existingUser;
         }
 
         // Create a new Hedera account for the app's tokens
