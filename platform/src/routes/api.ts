@@ -64,7 +64,7 @@ router.post('/v1/consent/withdraw/submit', authenticateApiKey, handlers.submitWi
 router.post('/v1/data-capture', authenticateApiKey, handlers.createDataCapture);
 router.get('/v1/data-capture/verify/:accountId/:serialNumber', authenticateApiKey, handlers.verifyDataCapture);
 router.get('/v1/data-capture/list', authenticateApiKey, handlers.listDataCaptures);
-router.get('/v1/consent/:tokenId/:serialNumber/status', authenticateApiKey, handlers.getConsentStatus);
+router.get('/v1/consent/:tokenId/status', authenticateApiKey, handlers.getConsentStatus);
 router.get('/v1/consent/active', authenticateApiKey, handlers.listActiveConsents);
 router.get('/v1/consent/withdrawn', authenticateApiKey, handlers.listWithdrawnConsents);
 router.get('/v1/consent/:tokenId/:serialNumber/history', authenticateApiKey, handlers.getConsentHistory);
