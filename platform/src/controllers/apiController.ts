@@ -244,6 +244,31 @@ export const createUser = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * @swagger
+ * /api/v1/users/associate:
+ *   post:
+ *     summary: Submit a signed token association transaction
+ *     tags: [Users]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - signedTransaction
+ *             properties:
+ *               signedTransaction:
+ *                 type: string
+ *                 description: Base64 encoded signed transaction
+ *     responses:
+ *       200:
+ *         description: Token association successful
+ */
+
 export const submitTokenAssociation = async (req: Request, res: Response) => {
     try {
         const { signedTransaction } = req.body;
@@ -450,6 +475,40 @@ export const createWithdrawConsentTransaction = async (req: Request, res: Respon
     }
 };
 
+/**
+ * @swagger
+ * /api/v1/consent/withdraw:
+ *   post:
+ *     summary: Create an unsigned transaction for withdrawing consent
+ *     tags: [Consent]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - accountId
+ *               - serialNumber
+ *               - consentHash
+ *             properties:
+ *               accountId:
+ *                 type: string
+ *                 example: "0.0.123456"
+ *               serialNumber:
+ *                 type: integer
+ *                 example: 1
+ *               consentHash:
+ *                 type: string
+ *               uid:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Unsigned withdraw transaction created successfully
+ */
+
 export const submitWithdrawConsent = async (req: Request, res: Response) => {
     try {
         const { signedTransaction, accountId, uid } = req.body;
@@ -508,6 +567,36 @@ export const submitWithdrawConsent = async (req: Request, res: Response) => {
         });
     }
 };
+
+/**
+ * @swagger
+ * /api/v1/consent/withdraw/submit:
+ *   post:
+ *     summary: Submit a signed consent withdrawal transaction
+ *     tags: [Consent]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - signedTransaction
+ *               - accountId
+ *             properties:
+ *               signedTransaction:
+ *                 type: string
+ *                 description: Base64 encoded signed transaction
+ *               accountId:
+ *                 type: string
+ *               uid:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Consent withdrawn successfully
+ */
 
 // check consent using mirror node
 async function verifyConsentWithMirrorNode(accountId: string, consentTokenId: string, categoryId: number): Promise<boolean> {
@@ -645,6 +734,32 @@ export const createDataCapture = async (req: Request, res: Response) => {
         });
     }
 };
+
+/**
+ * @swagger
+ * /api/v1/data-capture/verify/{accountId}/{serialNumber}:
+ *   get:
+ *     summary: Verify a data capture NFT
+ *     tags: [Data Capture]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: accountId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Hedera account ID
+ *       - in: path
+ *         name: serialNumber
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: NFT serial number
+ *     responses:
+ *       200:
+ *         description: Data capture verification result
+ */
 
 export const verifyDataCapture = async (req: Request, res: Response) => {
     try {
