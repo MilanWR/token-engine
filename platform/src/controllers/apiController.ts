@@ -691,7 +691,10 @@ export const createDataCapture = async (req: Request, res: Response) => {
             dataCaptureTokenId: appOwner.tokenIds[0].dataCaptureTokenId
         });
 
-        const nftResponse = await hederaService.mintNFT(accountId, dataHash, false);
+        // Create metadata in the same format as consent: categoryId:dataHash
+        const metadata = `${categoryId}:${dataHash}`;
+
+        const nftResponse = await hederaService.mintNFT(accountId, metadata, false);
         
         if (!nftResponse.success) {
             throw new Error('Failed to mint data capture NFT');
