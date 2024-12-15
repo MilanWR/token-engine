@@ -86,9 +86,9 @@ export class HederaService {
         this.treasuryId = treasuryId;
     }
 
-    public setTokenId(tokenId: string) {
-        this.tokenId = TokenId.fromString(tokenId);
-    }
+    // public setTokenId(tokenId: string) {
+    //     this.tokenId = TokenId.fromString(tokenId);
+    // }
 
     // Step 1: Just create the account
     async createAccount(publicKey: string) {
@@ -347,9 +347,9 @@ export class HederaService {
         this.incentiveTokenId = tokenId;
     }
 
-    getIncentiveTokenId(): string {
-        return this.incentiveTokenId;
-    }
+    // getIncentiveTokenId(): string {
+    //     return this.incentiveTokenId;
+    // }
 
    // Add this function to hederaService.ts:
 
