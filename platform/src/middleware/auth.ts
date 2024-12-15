@@ -31,32 +31,31 @@ export const authenticateApiKey = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
-) => {
-  const apiKey = req.headers['x-api-key'];
-
-  if (!apiKey) {
-    return res.status(401).json({ error: 'API key required' });
-  }
-
+): Promise<void> => {
   try {
-    const user = await prisma.user.findFirst({
-      where: {
-        apiKey: apiKey as string,
-        isActive: true,
-      },
-      include: {
-        subscription: true,
-      },
+    const apiKey = req.headers['x-api-key'];
+
+    if (!apiKey) {
+      res.status(401).json({ error: 'API key is required' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { apiKey: apiKey as string }
     });
 
     if (!user) {
-      return res.status(403).json({ error: 'Invalid API key' });
+      res.status(401).json({ error: 'Invalid API key' });
+      return;
     }
 
     req.user = user;
     next();
   } catch (error) {
-    console.error('Auth error:', error);
-    return res.status(500).json({ error: 'Server error' });
+    console.error('Auth middleware error:', error);
+    res.status(500).json({ 
+      error: 'Authentication error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }; 

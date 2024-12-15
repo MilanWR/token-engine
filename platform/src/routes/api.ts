@@ -1,5 +1,5 @@
-import express from 'express';
-import { authenticateApiKey } from '../middleware/auth';
+import express, { Request, Response, NextFunction, RequestHandler } from 'express';
+import { authenticateApiKey, AuthRequest } from '../middleware/auth';
 import { 
     createUser, 
     submitTokenAssociation, 
@@ -18,32 +18,47 @@ import {
     submitRedeemTransaction,
     getIncentiveBalance
 } from '../controllers/apiController';
-import { RequestHandler } from 'express';
 
 const router = express.Router();
 
-// Update type casting to handle async responses
-type AsyncRequestHandler = (req: Request, res: Response, next: NextFunction) => Promise<any>;
+// Update AsyncHandler to allow Response returns
+type AsyncHandler = (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => Promise<void | Response<any, Record<string, any>>>;
 
+// Update wrapper to handle Response returns
+const wrapHandler = (handler: AsyncHandler): RequestHandler => {
+    return async (req, res, next) => {
+        try {
+            const result = await handler(req, res, next);
+            if (result) {
+                return result;
+            }
+        } catch (error) {
+            next(error);
+        }
+    };
+};
 
-// Cast controller functions to RequestHandler to fix TypeScript errors
-const handlers: Record<string, RequestHandler> = {
-    createUser: createUser as unknown as RequestHandler,
-    submitTokenAssociation: submitTokenAssociation as unknown as RequestHandler,
-    createConsent: createConsent as unknown as RequestHandler,
-    createWithdrawConsentTransaction: createWithdrawConsentTransaction as unknown as RequestHandler,
-    submitWithdrawConsent: submitWithdrawConsent as unknown as RequestHandler,
-    createDataCapture: createDataCapture as unknown as RequestHandler,
-    verifyDataCapture: verifyDataCapture as unknown as RequestHandler,
-    listDataCaptures: listDataCaptures as unknown as RequestHandler,
-    getConsentStatus: getConsentStatus as unknown as RequestHandler,
-    listActiveConsents: listActiveConsents as unknown as RequestHandler,
-    listWithdrawnConsents: listWithdrawnConsents as unknown as RequestHandler,
-    getConsentHistory: getConsentHistory as unknown as RequestHandler,
-    sendIncentiveTokens: sendIncentiveTokens as unknown as RequestHandler,
-    createRedeemTokenTransaction: createRedeemTokenTransaction as unknown as RequestHandler,
-    submitRedeemTransaction: submitRedeemTransaction as unknown as RequestHandler,
-    getIncentiveBalance: getIncentiveBalance as unknown as RequestHandler
+const handlers = {
+    createUser: wrapHandler(createUser),
+    submitTokenAssociation: wrapHandler(submitTokenAssociation),
+    createConsent: wrapHandler(createConsent),
+    createWithdrawConsentTransaction: wrapHandler(createWithdrawConsentTransaction),
+    submitWithdrawConsent: wrapHandler(submitWithdrawConsent),
+    createDataCapture: wrapHandler(createDataCapture),
+    verifyDataCapture: wrapHandler(verifyDataCapture),
+    listDataCaptures: wrapHandler(listDataCaptures),
+    getConsentStatus: wrapHandler(getConsentStatus),
+    listActiveConsents: wrapHandler(listActiveConsents),
+    listWithdrawnConsents: wrapHandler(listWithdrawnConsents),
+    getConsentHistory: wrapHandler(getConsentHistory),
+    sendIncentiveTokens: wrapHandler(sendIncentiveTokens),
+    createRedeemTokenTransaction: wrapHandler(createRedeemTokenTransaction),
+    submitRedeemTransaction: wrapHandler(submitRedeemTransaction),
+    getIncentiveBalance: wrapHandler(getIncentiveBalance)
 };
 
 // Routes
