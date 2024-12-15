@@ -316,7 +316,6 @@ export const submitTokenAssociation = async (req: Request, res: Response) => {
  *       401:
  *         description: Invalid API key
  */
-
 export const createConsent = async (req: Request, res: Response) => {
     try {
         const { accountId, consentHash, categoryId, incentiveAmount, uid } = req.body;
@@ -344,7 +343,9 @@ export const createConsent = async (req: Request, res: Response) => {
             accountId: appOwner.tokenIds[0].accountId
         });
 
-        const nftResponse = await hederaService.mintNFT(accountId, consentHash, true);
+        // Create metadata in the correct format: categoryId:consentHash
+        const metadata = `${categoryId}:${consentHash}`;
+        const nftResponse = await hederaService.mintNFT(accountId, metadata, true);
         
         if (!nftResponse.success) {
             throw new Error('Failed to mint NFT');
