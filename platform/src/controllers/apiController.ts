@@ -766,24 +766,26 @@ export const verifyDataCapture = async (req: Request, res: Response) => {
     try {
         const { accountId, serialNumber } = req.params;
 
-        const dataCapture = await prisma.dataCapture.findFirst({
-            where: {
-                accountId,
-                serialNumber: parseInt(serialNumber)
-            }
+        // Get app owner details from database using API key
+        const appOwner = await prisma.user.findUnique({
+            where: { apiKey: req.headers['x-api-key'] as string },
+            include: { tokenIds: true }
         });
 
-        if (!dataCapture) {
-            return res.status(404).json({
-                success: false,
-                error: 'Data capture not found'
-            });
+        if (!appOwner?.tokenIds[0]) {
+            return res.status(404).json({ error: 'Token IDs not found' });
         }
 
-        return res.status(200).json({
-            success: true,
-            dataCapture
-        });
+        // Get all NFTs for this account and token
+        const nfts = await mirrorNodeService.getAccountNFTs(
+            appOwner.tokenIds[0].dataCaptureTokenId, 
+            accountId
+        );
+
+        // Check if the specific serial number exists in the account's NFTs
+        const hasNFT = nfts.some(nft => nft.serial_number === parseInt(serialNumber));
+
+        return res.json({ success: hasNFT });
 
     } catch (error) {
         console.error('Verify data capture error:', error);
