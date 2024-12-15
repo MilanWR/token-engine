@@ -31,9 +31,9 @@ export class HederaService {
     private client: Client;
     private treasuryId: string;
     private treasuryKey: PrivateKey;
-    private readonly consentTokenId: string;
-    private readonly dataCaptureTokenId: string;
-    private readonly incentiveTokenId: string;
+    private consentTokenId: string;
+    private dataCaptureTokenId: string;
+    private incentiveTokenId: string;
     private operatorKey: PrivateKey;
     private readonly mirrorNodeUrl: string;
 
@@ -379,6 +379,26 @@ async getTokenBalance(accountId: string, tokenId: string): Promise<number> {
         console.error('Error getting token balance:', error);
         throw error;
     }
+}
+
+// Update token IDs method
+setTokenIds(consentTokenId: string, dataCaptureTokenId: string, incentiveTokenId: string) {
+    this.consentTokenId = consentTokenId;
+    this.dataCaptureTokenId = dataCaptureTokenId;
+    this.incentiveTokenId = incentiveTokenId;
+}
+
+// Getter methods
+getConsentTokenId(): string {
+    return this.consentTokenId;
+}
+
+getDataCaptureTokenId(): string {
+    return this.dataCaptureTokenId;
+}
+
+getIncentiveTokenId(): string {
+    return this.incentiveTokenId;
 }
 }
 
