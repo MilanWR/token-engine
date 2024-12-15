@@ -851,9 +851,9 @@ export const listDataCaptures = async (req: Request, res: Response) => {
 
 /**
  * @swagger
- * /api/v1/consent/{tokenId}/{serialNumber}/status:
+ * /api/v1/consent/{tokenId}/status:
  *   get:
- *     summary: Get consent NFT status
+ *     summary: Check if user has active consent for a category
  *     tags: [Consent]
  *     security:
  *       - ApiKeyAuth: []
@@ -864,23 +864,63 @@ export const listDataCaptures = async (req: Request, res: Response) => {
  *         schema:
  *           type: string
  *         description: Consent token ID
- *       - in: path
- *         name: serialNumber
+ *       - in: query
+ *         name: accountId
  *         required: true
  *         schema:
- *           type: integer
- *         description: NFT serial number
+ *           type: string
+ *         description: Account ID to check
+ *       - in: query
+ *         name: categoryId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Category ID to check
  *     responses:
  *       200:
- *         description: Consent status details
+ *         description: Consent status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 hasConsent:
+ *                   type: boolean
+ *                   description: Whether the user has active consent for this category
  */
-
 export const getConsentStatus = async (req: Request, res: Response) => {
     try {
-        const { tokenId, serialNumber } = req.params;
-        const status = await mirrorNodeService.getConsentStatus(tokenId, parseInt(serialNumber));
-        return res.json(status);
+        const { tokenId } = req.params;
+        const { accountId, categoryId } = req.query;
+
+        if (!accountId || !categoryId) {
+            return res.status(400).json({
+                error: 'Missing required query parameters: accountId and categoryId'
+            });
+        }
+
+        // Get all NFTs for this account and token
+        const nfts = await mirrorNodeService.getAccountNFTs(
+            tokenId, 
+            accountId as string
+        );
+
+        // Check if any NFT metadata matches the category ID
+        const hasConsent = nfts.some(nft => {
+            try {
+                const metadata = mirrorNodeService.decodeMetadata(nft.metadata);
+                const [nftCategoryId] = metadata.split(':');
+                return nftCategoryId === categoryId;
+            } catch (error) {
+                console.error('Error processing NFT metadata:', error);
+                return false;
+            }
+        });
+
+        return res.json({ hasConsent });
+
     } catch (error) {
+        console.error('Get consent status error:', error);
         return res.status(500).json({
             error: 'Error getting consent status',
             details: error instanceof Error ? error.message : 'Unknown error'
