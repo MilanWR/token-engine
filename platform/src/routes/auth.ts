@@ -26,11 +26,14 @@ export const authenticateToken = async (
     const decoded = jwt.verify(token, process.env.JWT_SECRET!);
     req.user = decoded;
     next();
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof JsonWebTokenError) {
       return res.status(403).json({ error: `Invalid token: ${error.message}` });
     }
-    return res.status(403).json({ error: 'Invalid token' });
+    return res.status(403).json({ 
+      error: 'Invalid token',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 };
 
@@ -58,11 +61,11 @@ export const authenticateApiKey = async (
 
     req.user = user;
     next();
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Auth middleware error:', error);
     res.status(500).json({ 
       error: 'Authentication error',
-      details: error instanceof Error ? error.message : String(error)
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 };
