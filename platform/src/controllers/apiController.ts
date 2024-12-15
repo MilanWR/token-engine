@@ -785,7 +785,7 @@ export const verifyDataCapture = async (req: Request, res: Response) => {
         // Check if the specific serial number exists in the account's NFTs
         const hasNFT = nfts.some(nft => nft.serial_number === parseInt(serialNumber));
 
-        return res.json({ success: hasNFT });
+        return res.json({ hasDataCapture: hasNFT });
 
     } catch (error) {
         console.error('Verify data capture error:', error);
@@ -825,15 +825,40 @@ export const listDataCaptures = async (req: Request, res: Response) => {
     try {
         const { accountId, categoryId } = req.query;
         
-        const where: any = { accountId: accountId as string };
-        if (categoryId) {
-            where.categoryId = parseInt(categoryId as string);
+        if (!accountId) {
+            return res.status(400).json({
+                error: 'Missing required query parameter: accountId'
+            });
         }
 
-        const dataCaptures = await prisma.dataCapture.findMany({
-            where,
-            orderBy: { createdAt: 'desc' }
+        // Get app owner details from database using API key
+        const appOwner = await prisma.user.findUnique({
+            where: { apiKey: req.headers['x-api-key'] as string },
+            include: { tokenIds: true }
         });
+
+        if (!appOwner?.tokenIds[0]) {
+            return res.status(404).json({ error: 'Token IDs not found' });
+        }
+
+        // Get all NFTs for this account and token
+        const nfts = await mirrorNodeService.getAccountNFTs(
+            appOwner.tokenIds[0].dataCaptureTokenId, 
+            accountId as string
+        );
+
+        // Process NFTs and filter by category if specified
+        const dataCaptures = nfts
+            .map(nft => {
+                const metadata = mirrorNodeService.decodeMetadata(nft.metadata);
+                return {
+                    serialNumber: nft.serial_number,
+                    accountId: nft.account_id,
+                    ...metadata,
+                    timestamp: nft.created_timestamp
+                };
+            })
+            .filter(capture => !categoryId || capture.categoryId === parseInt(categoryId as string));
 
         return res.status(200).json({
             success: true,
