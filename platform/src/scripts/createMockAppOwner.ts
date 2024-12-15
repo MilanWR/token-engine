@@ -3,16 +3,16 @@ import { client, operatorKey } from "../config/hedera";
 import prisma from "../config/database";
 import { generateApiKey } from "../utils/apiKey";
 
-async function createMockAppOwner() {
+async function createMockAppOwner(email: string = 'mockapp@example.com') {
     try {
-        // Check for existing user
+        // Check for existing user with this email
         const existingUser = await prisma.user.findUnique({
-            where: { email: 'mockapp@example.com' },
+            where: { email },
             include: { tokenIds: true }
         });
 
         if (existingUser) {
-            console.log('Mock app owner already exists:', {
+            console.log(`Mock app owner with email ${email} already exists:`, {
                 email: existingUser.email,
                 apiKey: existingUser.apiKey,
                 tokenIds: existingUser.tokenIds
@@ -84,20 +84,14 @@ async function createMockAppOwner() {
         const incentiveTokenId = (await incentiveTokenResponse.getReceipt(client)).tokenId!.toString();
         console.log('Incentive Token ID:', incentiveTokenId);
 
-        // Create app owner in database
+        // Create app owner in database with provided email
         console.log('\nCreating app owner in database...');
         const apiKey = generateApiKey();
 
-        console.log('Creating user with token IDs:', {
-            consentTokenId,
-            dataCaptureTokenId,
-            incentiveTokenId
-        });
-
         const appOwner = await prisma.user.create({
             data: {
-                email: 'mockapp@example.com',
-                password: 'mock-password-123', // Add password field
+                email,
+                password: 'mock-password-123',
                 firstName: 'Mock',
                 lastName: 'App',
                 apiKey: apiKey,
@@ -115,8 +109,6 @@ async function createMockAppOwner() {
             }
         });
 
-        console.log('Created app owner with token IDs:', appOwner.tokenIds);
-
         console.log('\n=== Mock App Owner Created Successfully ===');
         console.log('\nApp Owner Details:');
         console.log('Email:', appOwner.email);
@@ -126,12 +118,14 @@ async function createMockAppOwner() {
         console.log('Consent Token ID:', consentTokenId);
         console.log('Data Capture Token ID:', dataCaptureTokenId);
         console.log('Incentive Token ID:', incentiveTokenId);
-        console.log('\nNote: The app account uses the operator\'s private key for backend control');
 
+        return appOwner;
     } catch (error) {
         console.error('Error creating mock app owner:', error);
         throw error;
     }
 }
 
-createMockAppOwner();
+// Get email from command line argument or use default
+const email = process.argv[2] || 'mockapp@example.com';
+createMockAppOwner(email);
