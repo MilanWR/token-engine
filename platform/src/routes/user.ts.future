@@ -8,4 +8,4 @@ router.get('/profile', authenticateToken, (req, res) => {
   res.json({ message: 'Profile route - to be implemented' });
 });
 
-export default router;
+export default router; 

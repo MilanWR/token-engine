@@ -10,6 +10,14 @@ export interface AuthRequest extends Request {
   user?: any;
 }
 
+// Custom error handler function
+const handleError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'Unknown error occurred';
+};
+
 export const authenticateToken = async (
   req: AuthRequest,
   res: Response,
@@ -32,7 +40,7 @@ export const authenticateToken = async (
     }
     return res.status(403).json({ 
       error: 'Invalid token',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: handleError(error)
     });
   }
 };
@@ -62,10 +70,10 @@ export const authenticateApiKey = async (
     req.user = user;
     next();
   } catch (error: unknown) {
-    console.error('Auth middleware error:', error);
+    console.error('Auth middleware error:', handleError(error));
     res.status(500).json({ 
       error: 'Authentication error',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: handleError(error)
     });
   }
 };
@@ -74,8 +82,11 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     try {
         // Your registration logic
         res.status(201).json({ message: 'User registered' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(500).json({ 
+            error: 'Registration error',
+            details: handleError(error)
+        });
     }
 });
 
@@ -83,9 +94,12 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     try {
         // Your login logic
         res.status(200).json({ token: 'your-token' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(500).json({ 
+            error: 'Authentication error',
+            details: handleError(error)
+        });
     }
 });
 
-export default router; 
+export default router;
