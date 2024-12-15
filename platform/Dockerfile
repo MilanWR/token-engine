@@ -18,7 +18,7 @@ RUN npm install
 # Generate Prisma client
 RUN npx prisma generate
 
-# Copy source code
+# Copy source code and scripts
 COPY src/ ./src/
 
 # Build TypeScript code
@@ -34,16 +34,18 @@ WORKDIR /app
 
 # Copy package files and prisma schema
 COPY package*.json ./
+COPY tsconfig.json ./
 COPY prisma ./prisma/
 
-# Install production dependencies
-RUN npm install --only=production
+# Install dependencies including development dependencies for scripts
+RUN npm install
 
 # Generate Prisma client in production
 RUN npx prisma generate
 
-# Copy built files from builder stage
+# Copy source files and built files
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src ./src
 
 # Expose port 3000
 EXPOSE 3000
