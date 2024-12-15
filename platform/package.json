@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/app.js",
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "test": "jest",
     "create-mock-owner": "ts-node src/scripts/createMockAppOwner.ts",
     "test-sign": "ts-node src/scripts/testSignTransaction.ts",
