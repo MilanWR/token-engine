@@ -212,7 +212,7 @@ export const createUser = async (req: Request, res: Response) => {
                 publicKey,
                 accountId: accountResponse.accountId,
                 unsignedTokenAssociateTransaction: Buffer.from(unsignedTransaction).toString('base64'),
-                ...(uid && { uid })
+                ...(req.body.uid ? { uid: req.body.uid } : {})
             });
         } catch (tokenError) {
             console.error('Token association generation error:', tokenError);
@@ -221,7 +221,7 @@ export const createUser = async (req: Request, res: Response) => {
             return res.status(201).json({
                 publicKey,
                 accountId: accountResponse.accountId,
-                ...(uid && { uid })
+                ...(req.body.uid ? { uid: req.body.uid } : {})
             });
         }
     } catch (error) {
@@ -233,7 +233,7 @@ export const createUser = async (req: Request, res: Response) => {
             return res.status(201).json({
                 publicKey: req.body.publicKey,
                 accountId: mockAccountId,
-                ...(uid && { uid })
+                ...(req.body.uid ? { uid: req.body.uid } : {})
             });
         }
         
@@ -254,9 +254,7 @@ export const submitTokenAssociation = async (req: Request, res: Response) => {
             });
         }
 
-        const success = await hederaService.submitSignedTransaction(
-            Buffer.from(signedTransaction, 'base64')
-        );
+        const success = await hederaService.submitSignedTransaction(signedTransaction);
 
         return res.status(200).json({
             success,
@@ -472,12 +470,12 @@ export const submitWithdrawConsent = async (req: Request, res: Response) => {
             });
         }
 
-        // Set the treasury and token IDs for this operation
-        hederaService.setTreasuryId(appOwner.tokenIds[0].accountId);
-        hederaService.setTokenIds({
+        // Initialize HederaService with all token IDs
+        await hederaService.initialize({
             consentTokenId: appOwner.tokenIds[0].consentTokenId,
             dataCaptureTokenId: appOwner.tokenIds[0].dataCaptureTokenId,
-            incentiveTokenId: appOwner.tokenIds[0].incentiveTokenId
+            incentiveTokenId: appOwner.tokenIds[0].incentiveTokenId,
+            accountId: appOwner.tokenIds[0].accountId
         });
 
         // Continue with transaction submission
@@ -490,7 +488,7 @@ export const submitWithdrawConsent = async (req: Request, res: Response) => {
                     accountId,
                     uid,
                     withdrawnAt: null,
-                    userId: appOwner.id  // Add this to ensure we only update this owner's consents
+                    userId: appOwner.id
                 },
                 data: {
                     withdrawnAt: new Date()
