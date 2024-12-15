@@ -35,8 +35,9 @@ export class HederaService {
     private dataCaptureTokenId: string;
     private incentiveTokenId: string;
     private operatorKey: PrivateKey;
+    private mirrorNodeUrl: string;
 
-    constructor() {
+    constructor(network: string = 'testnet') {
         // Initialize client
         this.client = Client.forTestnet();
 
@@ -55,6 +56,9 @@ export class HederaService {
         this.client.setOperator(operatorId, this.operatorKey);
 
         console.log('HederaService initialized with operator:', operatorId);
+
+        // Set mirror node URL based on network
+        this.mirrorNodeUrl = `https://${network}.mirrornode.hedera.com`;
     }
 
     // Initialize all token IDs
@@ -340,19 +344,35 @@ export class HederaService {
         return this.incentiveTokenId;
     }
 
-    async getTokenBalance(accountId: string, tokenId: string): Promise<number> {
-        try {
-            const balance = await new TokenBalanceQuery()
-                .setAccountId(AccountId.fromString(accountId))
-                .setTokenId(TokenId.fromString(tokenId))
-                .execute(this.client);
+   // Add this function to hederaService.ts:
 
-            return Number(balance.tokens.get(tokenId)) || 0;
-        } catch (error) {
-            console.error('Error getting token balance:', error);
-            throw error;
+async getTokenBalance(accountId: string, tokenId: string): Promise<number> {
+    try {
+        const response = await fetch(
+            `${this.mirrorNodeUrl}/api/v1/accounts/${accountId}/tokens?token.id=${tokenId}`
+        );
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch token balance: ${response.statusText}`);
         }
+
+        const data = await response.json();
+
+        // Check if tokens array exists and has items
+        if (data.tokens && data.tokens.length > 0) {
+            // Find the balance for our specific token
+            const tokenBalance = data.tokens[0].balance;
+            return Number(tokenBalance);
+        }
+
+        // Return 0 if no balance found
+        return 0;
+
+    } catch (error) {
+        console.error('Error getting token balance:', error);
+        throw error;
     }
+}
 }
 
 // Export a singleton instance

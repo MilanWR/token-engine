@@ -67,7 +67,7 @@ export const getUsageStats = async (req: Request, res: Response) => {
       },
     });
 
-    const totalCost = usage.reduce((sum, record) => sum + record.cost, 0);
+    const totalCost = usage.reduce((sum: number, record: any) => sum + record.cost, 0);
     const totalCalls = usage.length;
 
     res.json({

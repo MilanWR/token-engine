@@ -90,6 +90,37 @@ export {
     getIncentiveBalance
 };
 
+/**
+ * @swagger
+ * /api/v1/users:
+ *   post:
+ *     summary: Create a new user account
+ *     tags: [Users]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - publicKey
+ *             properties:
+ *               publicKey:
+ *                 type: string
+ *                 description: User's public key
+ *               uid:
+ *                 type: string
+ *                 description: Optional user identifier
+ *     responses:
+ *       201:
+ *         description: User created successfully
+ *       400:
+ *         description: Invalid request parameters
+ *       401:
+ *         description: Invalid API key
+ */
 export const createUser = async (req: Request, res: Response) => {
     try {
         console.log('createUser called');
