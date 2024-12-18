@@ -80,6 +80,30 @@ Data Capture Token ID: 0.0.1234569
 Incentive Token ID: 0.0.1234570
 ```
 
+### Sequence Diagrams
+
+HealthToken.AI consists of several key flows that enable secure consent management, data capture, and incentivization. Below are the detailed sequence diagrams for each flow:
+
+### User Creation Flow
+![User Creation Flow](./docs/images/userCreation.png)
+The user creation process establishes a new account on the Hedera network with the necessary token associations.
+
+### Consent Management Flow
+![Consent Flow](./docs/images/consent.png)
+Consent is managed through NFTs, providing verifiable proof of user consent status.
+
+### Data Capture Flow
+![Data Capture Flow](./docs/images/dataCapture.png)
+Data capture is conditional on active consent and can include automatic incentivization.
+
+### Incentive Management Flow
+![Incentive Flow](./docs/images/incentive.png)
+The incentive system enables automatic rewards and token redemption.
+
+### App Owner Setup Flow
+![Owner Flow](./docs/images/ownerFlow.png)
+App owners can set up their environment with necessary tokens and configurations.
+
 ## API Reference
 
 ### Authentication
@@ -491,4 +515,6 @@ Create new migration:
 ```bash
 npx prisma migrate dev --name description_of_changes
 ```
+
+
 
