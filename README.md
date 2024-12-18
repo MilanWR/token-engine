@@ -85,7 +85,7 @@ Incentive Token ID: 0.0.1234570
 HealthToken.AI consists of several key flows that enable secure consent management, data capture, and incentivization. Below are the detailed sequence diagrams for each flow:
 
 ### User Creation Flow
-![User Creation Flow](./docs/images/userCreation.png)
+![User Creation Flow](./docs/images/usercreation.png)
 The user creation process establishes a new account on the Hedera network with the necessary token associations.
 
 ### Consent Management Flow
